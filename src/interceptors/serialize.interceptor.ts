@@ -3,17 +3,20 @@ import {
   ExecutionContext,
   NestInterceptor,
 } from '@nestjs/common/interfaces';
+import { plainToClass } from 'class-transformer';
 import { map, Observable } from 'rxjs';
+import { UserDTO } from 'src/users/dtos/user.dto';
 
 export class SerialzeInterceptor implements NestInterceptor {
   intercept(
     context: ExecutionContext,
     next: CallHandler<any>,
   ): Observable<any> {
-    console.log('Running before thehandler', context);
     return next.handle().pipe(
       map((data: any) => {
-        console.log('I am running before response is sent out', data);
+        return plainToClass(UserDTO, data, {
+          excludeExtraneousValues: true,
+        });
       }),
     );
   }
