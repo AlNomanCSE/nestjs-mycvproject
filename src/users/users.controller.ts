@@ -28,7 +28,10 @@ export class UsersController {
   createUser(@Body() body: CreateUserDTO): Promise<User> {
     return this.autheService.signup(body.email, body.password);
   }
-
+  @Post('/signin')
+  signIn(@Body() body: CreateUserDTO): Promise<User> {
+    return this.autheService.signin(body.email, body.password);
+  }
   @Get('/:id')
   getUserInfo(@Param('id') id: string) {
     return this.userService.findOne(parseInt(id));

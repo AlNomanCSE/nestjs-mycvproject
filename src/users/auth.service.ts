@@ -2,6 +2,7 @@ import { BadRequestException, Injectable } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { randomBytes, scrypt as _script } from 'crypto';
 import { promisify } from 'util';
+import { sample } from 'rxjs';
 const scrypt = promisify(_script);
 @Injectable()
 export class AuthService {
@@ -24,6 +25,18 @@ export class AuthService {
     const resultPassword = salt + '.' + hash.toString('hex');
     // nore creating a new user with this password
     const user = await this.userService.create(email, resultPassword);
+    return user;
+  }
+  async signin(email: string, password: string) {
+    const [user] = await this.userService.find(email);
+    if (!user) {
+      throw new BadRequestException('User not found!');
+    }
+    const [salt, storeHash] = user.password.split('.');
+    const hash = (await scrypt(password, salt, 32)) as Buffer;
+    if (storeHash !== hash.toString('hex')) {
+      throw new BadRequestException('bad password');
+    }
     return user;
   }
 }
