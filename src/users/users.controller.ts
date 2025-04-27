@@ -7,6 +7,7 @@ import {
   Query,
   Delete,
   Patch,
+  Session,
 } from '@nestjs/common';
 import { CreateUserDTO } from './dtos/create-user.dto';
 import { UsersService } from './users.service';
@@ -16,8 +17,8 @@ import { Serialize } from 'src/interceptors/serialize.interceptor';
 import { UserDTO } from './dtos/user.dto';
 import { AuthService } from './auth.service';
 
-@Serialize(UserDTO)
 @Controller('auth')
+@Serialize(UserDTO)
 export class UsersController {
   constructor(
     private userService: UsersService,
@@ -25,19 +26,42 @@ export class UsersController {
   ) {}
 
   @Post('/signup')
+ 
   createUser(@Body() body: CreateUserDTO): Promise<User> {
     return this.autheService.signup(body.email, body.password);
   }
+
   @Post('/signin')
+
   signIn(@Body() body: CreateUserDTO): Promise<User> {
     return this.autheService.signin(body.email, body.password);
   }
+
+  @Get('/colors/:color')
+  setColor(@Param('color') color: string, @Session() session: any) {
+    if (!session) {
+      session = {};
+    }
+    session.color = color;
+    return { color, message: `Color set to ${color}` };
+  }
+
+  @Get('/colors')
+  getColor(@Session() session: any) {
+    if (!session) {
+      return { color: 'No session available' };
+    }
+    return { color: session.color || 'No color set' };
+  }
+
   @Get('/:id')
+  @Serialize(UserDTO)
   getUserInfo(@Param('id') id: string) {
     return this.userService.findOne(parseInt(id));
   }
 
   @Get()
+  @Serialize(UserDTO)
   findAllUsers(@Query('email') email: string) {
     return this.userService.find(email);
   }
