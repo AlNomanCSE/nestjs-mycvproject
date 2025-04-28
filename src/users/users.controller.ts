@@ -8,6 +8,8 @@ import {
   Delete,
   Patch,
   Session,
+  NotFoundException,
+  InternalServerErrorException,
 } from '@nestjs/common';
 import { CreateUserDTO } from './dtos/create-user.dto';
 import { UsersService } from './users.service';
@@ -17,8 +19,11 @@ import { Serialize } from 'src/interceptors/serialize.interceptor';
 import { UserDTO } from './dtos/user.dto';
 import { AuthService } from './auth.service';
 
+interface SessionData {
+  userId?: number;
+}
+
 @Controller('auth')
-@Serialize(UserDTO)
 export class UsersController {
   constructor(
     private userService: UsersService,
@@ -26,34 +31,58 @@ export class UsersController {
   ) {}
 
   @Post('/signup')
- 
+  @Serialize(UserDTO)
   createUser(@Body() body: CreateUserDTO): Promise<User> {
     return this.autheService.signup(body.email, body.password);
   }
 
   @Post('/signin')
-
-  signIn(@Body() body: CreateUserDTO): Promise<User> {
-    return this.autheService.signin(body.email, body.password);
-  }
-
-  @Get('/colors/:color')
-  setColor(@Param('color') color: string, @Session() session: any) {
-    if (!session) {
-      session = {};
+  @Serialize(UserDTO)
+  async signIn(@Body() body: CreateUserDTO, @Session() session: SessionData) {
+    console.log('Signin - Session before:', session);
+    const user = await this.autheService.signin(body.email, body.password);
+    console.log('Signin - User ID from service:', user.userId);
+    if (!user.userId || isNaN(user.userId)) {
+      throw new NotFoundException('User not found');
     }
-    session.color = color;
-    return { color, message: `Color set to ${color}` };
-  }
-
-  @Get('/colors')
-  getColor(@Session() session: any) {
     if (!session) {
-      return { color: 'No session available' };
+      session = {} as SessionData;
     }
-    return { color: session.color || 'No color set' };
+    session.userId = Number(user.userId);
+    console.log('Signin - Session after:', session);
+    return user;
   }
+  @Post('/signout')
+  signOut(@Session() session: SessionData) {
+    if (session && session.userId) {
+      session.userId = undefined;
+      return { message: 'Successfully signed out' };
+    }
+    return { message: 'No active session to sign out from' };
+  }
+  @Get('/whoami')
+  @Serialize(UserDTO)
+  async whoAmI(@Session() session: SessionData) {
+    console.log('Whoami - Session:', session);
 
+    if (!session || !session.userId) {
+      throw new NotFoundException('No user logged in');
+    }
+
+    try {
+      const user = await this.userService.findOne(session.userId);
+      if (!user) {
+        throw new NotFoundException('User not found');
+      }
+      return user;
+    } catch (error) {
+      console.error('Error in whoami:', error);
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      throw new InternalServerErrorException('Failed to retrieve user');
+    }
+  }
   @Get('/:id')
   @Serialize(UserDTO)
   getUserInfo(@Param('id') id: string) {

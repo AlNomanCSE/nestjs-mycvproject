@@ -3,22 +3,31 @@ import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
 import * as session from 'express-session';
 
+declare module 'express-session' {
+  interface SessionData {
+    userId?: number;
+  }
+}
+
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   
   app.use(
     session({
-      secret: 'my-secret',
-      resave: true,
-      saveUninitialized: true,
+      name: 'user_session',
+      secret: 'my-secret-key',
+      rolling: true, // Refresh the session cookie on every response
+      resave: false,
+      saveUninitialized: false,
       cookie: {
-        maxAge: 24 * 60 * 60 * 1000, // 24 hours
+        secure: process.env.NODE_ENV === 'production',
         httpOnly: true,
-        secure: false
-      }
-    })
+        maxAge: 60 * 60 * 1000,
+      },
+    }),
   );
-  
+
+
   app.useGlobalPipes(new ValidationPipe({ whitelist: true }));
   await app.listen(process.env.PORT ?? 3000);
 }

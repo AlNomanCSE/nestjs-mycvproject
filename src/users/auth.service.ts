@@ -29,6 +29,7 @@ export class AuthService {
   }
   async signin(email: string, password: string) {
     const [user] = await this.userService.find(email);
+    console.log('Auth Service - Found user:', user);
     if (!user) {
       throw new BadRequestException('User not found!');
     }
@@ -37,6 +38,7 @@ export class AuthService {
     if (storeHash !== hash.toString('hex')) {
       throw new BadRequestException('bad password');
     }
-    return user;
+    console.log('Auth Service - Returning user ID:', user.id);
+    return { user, userId: user.id };
   }
 }
