@@ -9,6 +9,7 @@ import {
   Patch,
   Session,
   NotFoundException,
+  UseGuards,
   InternalServerErrorException,
 } from '@nestjs/common';
 import { CreateUserDTO } from './dtos/create-user.dto';
@@ -19,6 +20,7 @@ import { Serialize } from 'src/interceptors/serialize.interceptor';
 import { UserDTO } from './dtos/user.dto';
 import { AuthService } from './auth.service';
 import { CurrentUser } from './decorators/current-user.decorator';
+import { AuthGuard } from './guards/auth.guard';
 
 interface SessionData {
   userId?: number;
@@ -82,6 +84,7 @@ export class UsersController {
   //     throw new InternalServerErrorException('Failed to retrieve user');
   //   }
   // }
+  @UseGuards(AuthGuard)
   @Get('/whoami')
   async whoAmI(@CurrentUser() user: User) {
     return user;
