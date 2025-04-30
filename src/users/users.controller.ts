@@ -18,6 +18,7 @@ import { UpdateUserDTO } from './dtos/update-user.dto';
 import { Serialize } from 'src/interceptors/serialize.interceptor';
 import { UserDTO } from './dtos/user.dto';
 import { AuthService } from './auth.service';
+import { CurrentUser } from './decorators/current-user.decorator';
 
 interface SessionData {
   userId?: number;
@@ -39,9 +40,8 @@ export class UsersController {
   @Post('/signin')
   @Serialize(UserDTO)
   async signIn(@Body() body: CreateUserDTO, @Session() session: SessionData) {
-    console.log('Signin - Session before:', session);
     const user = await this.autheService.signin(body.email, body.password);
-    console.log('Signin - User ID from service:', user.userId);
+
     if (!user.userId || isNaN(user.userId)) {
       throw new NotFoundException('User not found');
     }
@@ -49,7 +49,6 @@ export class UsersController {
       session = {} as SessionData;
     }
     session.userId = Number(user.userId);
-    console.log('Signin - Session after:', session);
     return user;
   }
   @Post('/signout')
@@ -60,28 +59,32 @@ export class UsersController {
     }
     return { message: 'No active session to sign out from' };
   }
+  // @Get('/whoami')
+  // @Serialize(UserDTO)
+  // async whoAmI(@Session() session: SessionData) {
+  //   console.log('Whoami - Session:', session);
+
+  //   if (!session || !session.userId) {
+  //     throw new NotFoundException('No user logged in');
+  //   }
+
+  //   try {
+  //     const user = await this.userService.findOne(session.userId);
+  //     if (!user) {
+  //       throw new NotFoundException('User not found');
+  //     }
+  //     return user;
+  //   } catch (error) {
+  //     console.error('Error in whoami:', error);
+  //     if (error instanceof NotFoundException) {
+  //       throw error;
+  //     }
+  //     throw new InternalServerErrorException('Failed to retrieve user');
+  //   }
+  // }
   @Get('/whoami')
-  @Serialize(UserDTO)
-  async whoAmI(@Session() session: SessionData) {
-    console.log('Whoami - Session:', session);
-
-    if (!session || !session.userId) {
-      throw new NotFoundException('No user logged in');
-    }
-
-    try {
-      const user = await this.userService.findOne(session.userId);
-      if (!user) {
-        throw new NotFoundException('User not found');
-      }
-      return user;
-    } catch (error) {
-      console.error('Error in whoami:', error);
-      if (error instanceof NotFoundException) {
-        throw error;
-      }
-      throw new InternalServerErrorException('Failed to retrieve user');
-    }
+  async whoAmI(@CurrentUser() user: User) {
+    return user;
   }
   @Get('/:id')
   @Serialize(UserDTO)
